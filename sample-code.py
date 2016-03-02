@@ -12,28 +12,36 @@ except ImportError:
     import xml.etree.ElementTree as ET
 import numpy as np
 from scipy import sparse
+import cPickle as pickle
 
 import util
 
 TRAIN_DIR = "train"
 
-call_set = set([])
+call_list = pickle.load(open('tag_list.p', 'r'))
+call_set = set(call_list)
 
-def add_to_set(tree):
-    for el in tree.iter():
-        call = el.tag
-        call_set.add(call)
+#def add_to_set(tree):
+#    for el in tree.iter():
+#        call = el.tag
+#        call_set.add(call)
 
 def create_data_matrix(start_index, end_index, direc="train"):
     X = None
     classes = []
     ids = [] 
     i = -1
+    #for datafile in os.listdir(direc):
+    #    if datafile == '.DS_Store':
+    #        continue
+    #    tree = ET.parse(os.path.join(direc,datafile))
+    #    add_to_set(tree)
     for datafile in os.listdir(direc):
         if datafile == '.DS_Store':
             continue
 
         i += 1
+        print i
         if i < start_index:
             continue 
         if i >= end_index:
@@ -54,7 +62,11 @@ def create_data_matrix(start_index, end_index, direc="train"):
 
         # parse file as an xml document
         tree = ET.parse(os.path.join(direc,datafile))
-        add_to_set(tree)
+        #for elt in tree.getroot():
+        #    print [e.tag=='thread' for e in elt]
+        #    #print (elt.tag, elt.attrib, [e[0].tag=='all_section' for e in elt])
+        #print
+        #print
         this_row = call_feats(tree)
         if X is None:
             X = this_row 
@@ -64,13 +76,14 @@ def create_data_matrix(start_index, end_index, direc="train"):
     return X, np.array(classes), ids
 
 def call_feats(tree):
-    good_calls = ['sleep', 'dump_line']
+    #good_calls = ['sleep', 'dump_line']
+    good_calls = call_list
 
     call_counter = {}
     for el in tree.iter():
         call = el.tag
         if call not in call_counter:
-            call_counter[call] = 0
+            call_counter[call] = 1
         else:
             call_counter[call] += 1
 
@@ -89,14 +102,13 @@ def main():
     X_valid, t_valid, valid_ids = create_data_matrix(10, 15, TRAIN_DIR)
 
     print 'Data matrix (training set):'
-    print X_train
-    print t_train
+    print X_train.shape
     print train_ids
     print 'Classes (training set):'
     print t_train
 
     # From here, you can train models (eg by importing sklearn and inputting X_train, t_train).
+    print 'unique tags:', call_set
 
 if __name__ == "__main__":
     main()
-    
