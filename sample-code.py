@@ -89,6 +89,13 @@ def create_data_matrix(start_index, end_index, direc="train"):
         else:
             X = np.vstack((X, this_row))
 
+    X = X.T
+    for i in range(len(X)):
+        if X[i].any() and not X[i].all():
+            X = np.vstack((X, ECDF(X[i])(X[i])))
+            features.append(features[i] + ' ECDF')
+    X = X.T
+
     return X, np.array(classes), ids
 
 def call_feats(tree):
@@ -161,13 +168,6 @@ def main():
     print
 
     X, t, ids = create_data_matrix(0, 10000, TRAIN_DIR)
-
-    X = X.T
-    for i in range(len(X)):
-        if X[i].any() and not X[i].all():
-            X = np.vstack((X, ECDF(X[i])(X[i])))
-            features.append(features[i] + ' ECDF')
-    X = X.T
     print X.shape
 
     # filter all nontrivial column
