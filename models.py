@@ -84,6 +84,12 @@ print list(enumerate(reversed(np.array(features)[np.argsort(np.linalg.norm(clf.c
 clf.coef_.shape
 
 clf = RandomForestClassifier(min_samples_split=1)
+results = validate(clf)
+best_select = results[2]
+clf.fit(X, t)
+X_new = SelectFromModel(clf, threshold=str(best_select[1]) + '*' + best_select[0], prefit=True).transform(X)
+pickle.dump(clf, open('clf.p', 'w'))
+
 print 'Random Forest:', validate(clf)
 def is_int(s):
     try:
