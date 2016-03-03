@@ -10,6 +10,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.feature_selection import SelectFromModel
+from sklearn.naive_bayes import MultinomialNB
 import itertools
 
 from sknn.mlp import Classifier, Layer
@@ -61,7 +62,7 @@ def validate(clf):
     except:
         feature_importances = None
     selection_results = {'mean' : dict(), 'median' : dict()}
-    scalings = [0.1, 0.25, 0.5, 0.75, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2];
+    scalings = [0, 0.25, 0.5, 0.75, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2]
     for scaling in scalings:
         X_new = SelectFromModel(clf, threshold=str(scaling)+'*mean', prefit=True).transform(X)
         selection_results['mean'][scaling] = np.mean(cross_val_score(clf, X_new, t))
@@ -77,15 +78,22 @@ def validate(clf):
 clf = svm.LinearSVC()
 print np.mean(cross_val_score(clf, X, t))
 clf.fit(X, t)
+clf.feature_importance_
+validate(clf)
 print list(enumerate(reversed(np.array(features)[np.argsort(np.linalg.norm(clf.coef_, axis=0))])))
 clf.coef_.shape
 
 clf = RandomForestClassifier(min_samples_split=1)
-validate(clf)
-#print np.mean(cross_val_score(clf, X, t))
-#clf.fit(X, t)
-#plt.plot(range(X.shape[1]), clf.feature_importances_)
-#print list(enumerate(reversed(np.array(features)[np.argsort(clf.feature_importances_)])))
+print 'Random Forest:', validate(clf)
+def is_int(s):
+    try:
+        int(s)
+        return True
+    except ValueError:
+        return False
+clf.fit(X, t)
+plt.plot(range(X.shape[1]), clf.feature_importances_)
+print list(enumerate(reversed(np.array(features)[np.argsort(clf.feature_importances_)])))
 
 #model = SelectFromModel(clf, prefit=True)
 #X_new = model.transform(X)
@@ -101,7 +109,7 @@ validate(clf)
 
 
 clf = ExtraTreesClassifier(min_samples_split=1)
-validate(clf)
+print 'Extra Random Trees:', validate(clf)
 #print np.mean(cross_val_score(clf, X, t))
 #clf.fit(X, t)
 #plt.plot(range(X.shape[1]), clf.feature_importances_)
@@ -119,12 +127,20 @@ validate(clf)
 #    print 'median', scaling, X_new.shape[1], np.mean(cross_val_score(clf, X_new, t))
 
 clf = DecisionTreeClassifier(min_samples_split=1)
+print 'Decision Tree:', validate(clf)
+
+
+clf = LogisticRegression(solver='lbfgs', multi_class='multinomial')
+print np.mean(cross_val_score(clf, X, t))
+
+clf = LogisticRegression()
+print np.mean(cross_val_score(clf, X, t))
+
+clf = MultinomialNB()
 print np.mean(cross_val_score(clf, X, t))
 
 
-#clf = LogisticRegression(solver='lbfgs', multi_class='multinomial')
-#print cross_val_score(clf, X, t)
-
+np.mean(cross_val_score(KNeighborsClassifier(n_neighbors=20, weights='distance'), X, t))
 #print [np.mean(cross_val_score(KNeighborsClassifier(n_neighbors=n_neighbors), X, t)) for n_neighbors in range(1,21)]
 
 

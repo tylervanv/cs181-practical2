@@ -26,7 +26,7 @@ call_set = set(call_list)
 
 
 #features = ['sleep', 'dump_line']
-features = call_list + map(lambda s : s + ' indicator', call_list) + ['bytes_sent', 'bytes_received', 'any_sent', 'any_received', 'totaltime']
+features = call_list + map(lambda s : s + ' indicator', call_list) + map(str, range(4000)) + ['bytes_sent', 'bytes_received', 'any_sent', 'any_received', 'totaltime']
 #features = call_list + ['bytes_sent', 'bytes_received', 'any_sent', 'any_received', 'totaltime']
 
 
@@ -103,22 +103,29 @@ def call_feats(tree):
     call_counter['totaltime'] = 0
     for el in tree.iter():
         call = el.tag
+        # system calls
         if call not in call_counter:
             call_counter[call] = 1
             call_counter[call + ' indicator'] = 1
         else:
             call_counter[call] += 1
+        # bytes of data sent
         if call == 'send_socket':
             call_counter['bytes_sent'] += int(el.attrib['buffer_len'])
             call_counter['any_sent'] = 1
+        # bytes of data received
         elif call == 'recv_socket':
             call_counter['bytes_received'] += int(el.attrib['buffer_len'])
             call_counter['any_received'] = 1
+        # time spent in each process
         elif call == 'process':
             endtime = datetime.strptime(el.attrib['terminationtime'], '%M:%S.%f')
             starttime = datetime.strptime(el.attrib['starttime'], '%M:%S.%f')
             call_counter['totaltime'] += (endtime - starttime).total_seconds()
-
+        # indicator variable for each socket number
+        if 'socket' in el.attrib:
+            if el.attrib['socket'] in features:
+                call_counter[el.attrib['socket']] = 1
 
     ##### TRY ADDING (BINARY?) FEATURES FOR SOCKET NUMBER -- e.g. sockets 1772, 1812, and 1828 are usually Swizzor, while 2068 is never Swizzor
 
@@ -135,6 +142,8 @@ def call_feats(tree):
 
 ## Feature extraction
 def main():
+    features = call_list + map(lambda s : s + ' indicator', call_list) + map(str, range(4000)) + ['bytes_sent', 'bytes_received', 'any_sent', 'any_received', 'totaltime']
+
     X_train, t_train, train_ids = create_data_matrix(0, 5, TRAIN_DIR)
     X_valid, t_valid, valid_ids = create_data_matrix(10, 15, TRAIN_DIR)
 
@@ -160,6 +169,12 @@ def main():
             features.append(features[i] + ' ECDF')
     X = X.T
     print X.shape
+
+    # filter all nontrivial column
+    indices = [i for i in range(X.shape[1]) if X[:,i].any() and not X[:,i].all()]
+    X = X[:,indices]
+    features = np.array(features)[indices]
+    print 'Number of features:', len(features)
 
     pickle.dump((ids, X, t, features), open('train_data_new.p', 'w'))
 
