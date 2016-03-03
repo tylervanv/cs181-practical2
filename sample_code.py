@@ -26,7 +26,7 @@ call_set = set(call_list)
 
 
 #features = ['sleep', 'dump_line']
-features = call_list + map(lambda s : s + ' indicator', call_list) + map(str, range(4000)) + ['bytes_sent', 'bytes_received', 'any_sent', 'any_received', 'totaltime']
+features = call_list + map(lambda s : s + ' indicator', call_list) + map(str, range(4000)) + ['has_socket', 'bytes_sent', 'bytes_received', 'any_sent', 'any_received', 'totaltime']
 #features = call_list + ['bytes_sent', 'bytes_received', 'any_sent', 'any_received', 'totaltime']
 
 
@@ -82,6 +82,7 @@ def create_data_matrix(start_index, end_index, direc="train"):
         #print
 
         this_row_dict = call_feats(tree)
+        this_row_dict['has_socket'] = int('socket' in open(os.path.join(direc,datafile), 'r').read())
         this_row = np.array([(this_row_dict[feature] if feature in this_row_dict else 0) for feature in features])
         #this_row = call_feats(tree)
         if X is None:
@@ -96,7 +97,7 @@ def create_data_matrix(start_index, end_index, direc="train"):
             features.append(features[i] + ' ECDF')
     X = X.T
 
-    return X, np.array(classes), ids
+    return X, np.array(classes), ids, features
 
 def call_feats(tree):
     #good_calls = ['sleep', 'dump_line']
@@ -151,8 +152,8 @@ def call_feats(tree):
 def main():
     features = call_list + map(lambda s : s + ' indicator', call_list) + map(str, range(4000)) + ['bytes_sent', 'bytes_received', 'any_sent', 'any_received', 'totaltime']
 
-    X_train, t_train, train_ids = create_data_matrix(0, 5, TRAIN_DIR)
-    X_valid, t_valid, valid_ids = create_data_matrix(10, 15, TRAIN_DIR)
+    X_train, t_train, train_ids, _ = create_data_matrix(0, 5, TRAIN_DIR)
+    X_valid, t_valid, valid_ids, _ = create_data_matrix(10, 15, TRAIN_DIR)
 
     print 'Data matrix (training set):'
     print X_train
@@ -167,7 +168,7 @@ def main():
     print
     print
 
-    X, t, ids = create_data_matrix(0, 10000, TRAIN_DIR)
+    X, t, ids, features = create_data_matrix(0, 10000, TRAIN_DIR)
     print X.shape
 
     # filter all nontrivial column
