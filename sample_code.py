@@ -26,7 +26,8 @@ call_set = set(call_list)
 
 
 #features = ['sleep', 'dump_line']
-features = call_list + map(lambda s : s + ' indicator', call_list) + map(str, range(4000)) + ['has_socket', 'bytes_sent', 'bytes_received', 'any_sent', 'any_received', 'totaltime']
+features = call_list + map(lambda s : s + ' indicator', call_list) + map(str, range(4000))\
+           + ['has_socket', 'has_import', 'has_export', 'bytes_sent', 'bytes_received', 'any_sent', 'any_received', 'totaltime']
 #features = call_list + ['bytes_sent', 'bytes_received', 'any_sent', 'any_received', 'totaltime']
 
 
@@ -83,6 +84,8 @@ def create_data_matrix(start_index, end_index, direc="train"):
 
         this_row_dict = call_feats(tree)
         this_row_dict['has_socket'] = int('socket' in open(os.path.join(direc,datafile), 'r').read())
+        this_row_dict['has_import'] = int('import' in open(os.path.join(direc,datafile), 'r').read())
+        this_row_dict['has_export'] = int('export' in open(os.path.join(direc,datafile), 'r').read())
         this_row = np.array([(this_row_dict[feature] if feature in this_row_dict else 0) for feature in features])
         #this_row = call_feats(tree)
         if X is None:
