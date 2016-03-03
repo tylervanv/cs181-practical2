@@ -10,6 +10,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.feature_selection import SelectFromModel
+import itertools
 
 from sknn.mlp import Classifier, Layer
 #import skflow
@@ -28,6 +29,18 @@ print X.shape
 #X = X.T
 #print X.shape
 
+
+#from scikits.statsmodels.distributions import ECDF # installed from http://scikits.appspot.com/statsmodels
+#X = X.T
+#for i in range(len(X)):
+#    if X[i].any() and not X[i].all():
+#        X = np.vstack((X, ECDF(X[i])(X[i])))
+#        features.append(features[i] + ' ECDF')
+#X = X.T
+#print X.shape
+
+
+
 train_list = np.random.choice(range(len(X)), size = 0.7 * len(X), replace=False)
 train_mask = np.array([i in train_list for i in range(len(X))])
 valid_mask = ~train_mask
@@ -40,33 +53,74 @@ valid_mask = ~train_mask
 #clf = svm.SVC()
 #print np.mean(cross_val_score(clf, X, t))
 
+def validate(clf):
+    cvscore = np.mean(cross_val_score(clf, X, t))
+    clf.fit(X, t)
+    try:
+        feature_importances = list(reversed(np.array(features)[np.argsort(clf.feature_importances_)]))
+    except:
+        feature_importances = None
+    selection_results = {'mean' : dict(), 'median' : dict()}
+    scalings = [0.1, 0.25, 0.5, 0.75, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2];
+    for scaling in scalings:
+        X_new = SelectFromModel(clf, threshold=str(scaling)+'*mean', prefit=True).transform(X)
+        selection_results['mean'][scaling] = np.mean(cross_val_score(clf, X_new, t))
+        X_new = SelectFromModel(clf, threshold=str(scaling)+'*median', prefit=True).transform(X)
+        selection_results['median'][scaling] = np.mean(cross_val_score(clf, X_new, t))
+    best_select = max(itertools.product(['mean', 'median'], scalings), key = lambda (m,s) : selection_results[m][s])
+    X_new = SelectFromModel(clf, threshold=str(best_select[1]) + '*' + best_select[0], prefit=True).transform(X)
+    cvscore_selected = np.mean(cross_val_score(clf, X_new, t))
+    return cvscore, feature_importances, best_select, cvscore_selected
+
+
+
 clf = svm.LinearSVC()
 print np.mean(cross_val_score(clf, X, t))
 clf.fit(X, t)
 print list(enumerate(reversed(np.array(features)[np.argsort(np.linalg.norm(clf.coef_, axis=0))])))
 clf.coef_.shape
 
-#clf = RandomForestClassifier(min_samples_split=1)
+clf = RandomForestClassifier(min_samples_split=1)
+validate(clf)
 #print np.mean(cross_val_score(clf, X, t))
+#clf.fit(X, t)
+#plt.plot(range(X.shape[1]), clf.feature_importances_)
+#print list(enumerate(reversed(np.array(features)[np.argsort(clf.feature_importances_)])))
+
+#model = SelectFromModel(clf, prefit=True)
+#X_new = model.transform(X)
+#print np.mean(cross_val_score(clf, X_new, t))
+#for scaling in [0.25, 0.5, 0.75, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2]:
+#    model = SelectFromModel(clf, threshold=str(scaling)+'*mean', prefit=True)
+#    X_new = model.transform(X)
+#    print 'mean', scaling, X_new.shape[1], np.mean(cross_val_score(clf, X_new, t))
+#    model = SelectFromModel(clf, threshold=str(scaling)+'*median', prefit=True)
+#    X_new = model.transform(X)
+#    print 'median', scaling, X_new.shape[1], np.mean(cross_val_score(clf, X_new, t))
+
+
 
 clf = ExtraTreesClassifier(min_samples_split=1)
-print np.mean(cross_val_score(clf, X, t))
-clf.fit(X, t)
-plt.plot(range(X.shape[1]), clf.feature_importances_)
-print list(enumerate(reversed(np.array(features)[np.argsort(clf.feature_importances_)])))
-plt.hist(X[:,features.index('totaltime')], bins=np.arange(0, 2000, 10))
-plt.hist(np.log(X[:,features.index('bytes_received')]+1), bins=np.arange(0, 20, 1))
-
-for scaling in [0.5, 0.75, 0.9, 1, 1.1, 1.25, 1.5]:
-    model = SelectFromModel(clf, threshold=str(scaling)+'*mean', prefit=True)
-    X_new = model.transform(X)
-    print 'mean', scaling, X_new.shape[1], np.mean(cross_val_score(clf, X_new, t))
-    model = SelectFromModel(clf, threshold=str(scaling)+'*median', prefit=True)
-    X_new = model.transform(X)
-    print 'median', scaling, X_new.shape[1], np.mean(cross_val_score(clf, X_new, t))
-
-#clf = DecisionTreeClassifier(min_samples_split=1)
+validate(clf)
 #print np.mean(cross_val_score(clf, X, t))
+#clf.fit(X, t)
+#plt.plot(range(X.shape[1]), clf.feature_importances_)
+#print list(enumerate(reversed(np.array(features)[np.argsort(clf.feature_importances_)])))
+
+#model = SelectFromModel(clf, prefit=True)
+#X_new = model.transform(X)
+#print np.mean(cross_val_score(clf, X_new, t))
+#for scaling in [0.25, 0.5, 0.75, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2]:
+#    model = SelectFromModel(clf, threshold=str(scaling)+'*mean', prefit=True)
+#    X_new = model.transform(X)
+#    print 'mean', scaling, X_new.shape[1], np.mean(cross_val_score(clf, X_new, t))
+#    model = SelectFromModel(clf, threshold=str(scaling)+'*median', prefit=True)
+#    X_new = model.transform(X)
+#    print 'median', scaling, X_new.shape[1], np.mean(cross_val_score(clf, X_new, t))
+
+clf = DecisionTreeClassifier(min_samples_split=1)
+print np.mean(cross_val_score(clf, X, t))
+
 
 #clf = LogisticRegression(solver='lbfgs', multi_class='multinomial')
 #print cross_val_score(clf, X, t)
