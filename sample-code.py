@@ -25,7 +25,8 @@ call_set = set(call_list)
 
 
 #features = ['sleep', 'dump_line']
-features = call_list + ['bytes_sent', 'bytes_received', 'any_sent', 'any_received', 'totaltime']
+features = call_list + map(lambda s : s + ' indicator', call_list) + ['bytes_sent', 'bytes_received', 'any_sent', 'any_received', 'totaltime']
+#features = call_list + ['bytes_sent', 'bytes_received', 'any_sent', 'any_received', 'totaltime']
 
 
 
@@ -103,6 +104,7 @@ def call_feats(tree):
         call = el.tag
         if call not in call_counter:
             call_counter[call] = 1
+            call_counter[call + ' indicator'] = 1
         else:
             call_counter[call] += 1
         if call == 'send_socket':
@@ -149,7 +151,7 @@ def main():
     print
 
     X, t, ids = create_data_matrix(0, 10000, TRAIN_DIR)
-    pickle.dump((ids, X, t), open('train_data_new.p', 'w'))
+    pickle.dump((ids, X, t, features), open('train_data_new.p', 'w'))
 
 if __name__ == "__main__":
     main()

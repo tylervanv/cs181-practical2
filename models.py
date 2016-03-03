@@ -11,16 +11,18 @@ from sklearn.linear_model import LogisticRegression
 from sknn.mlp import Classifier, Layer
 #import skflow
 
-ids, X, t = pickle.load(open('train_data_new.p', 'r'))
+import util
+
+ids, X, t, features = pickle.load(open('train_data_new.p', 'r'))
 print X.shape
 
 # add binary indicator variables for every nontrivial variable in the original data
-X = X.T
-for i in range(len(X)):
-    if X[i].any() and not X[i].all():
-        X = np.vstack((X, np.array(map(int, X[i] != 0))))
-X = X.T
-print X.shape
+#X = X.T
+#for i in range(len(X)):
+#    if X[i].any() and not X[i].all():
+#        X = np.vstack((X, np.array(map(int, X[i] != 0))))
+#X = X.T
+#print X.shape
 
 train_list = np.random.choice(range(len(X)), size = 0.7 * len(X), replace=False)
 train_mask = np.array([i in train_list for i in range(len(X))])
@@ -37,8 +39,13 @@ valid_mask = ~train_mask
 #clf = RandomForestClassifier(min_samples_split=1)
 #print np.mean(cross_val_score(clf, X, t))
 
-#clf = ExtraTreesClassifier(min_samples_split=1)
-#print np.mean(cross_val_score(clf, X, t))
+clf = ExtraTreesClassifier(min_samples_split=1)
+print np.mean(cross_val_score(clf, X, t))
+clf.fit(X, t)
+import matplotlib.pyplot as plt
+plt.plot(range(X.shape[1]), clf.feature_importances_)
+print list(enumerate(np.array(features)[np.argsort(clf.feature_importances_)]))
+#plt.hist(X[:,features.index('totaltime')], bins=np.arange(0, 2000, 10))
 
 #clf = DecisionTreeClassifier(min_samples_split=1)
 #print np.mean(cross_val_score(clf, X, t))
@@ -79,7 +86,7 @@ valid_mask = ~train_mask
 #score = model.evaluate(X[valid_mask], t[valid_mask], batch_size=16)
 
 
-mlp = Classifier(layers = [Layer('Sigmoid', units=100), Layer(type='Softmax')])
-mlp.fit(X[train_mask], t[train_mask])
-predictions = mlp.predict(X[valid_mask])[:,0]
-print float(np.sum(np.array(predictions) == t[valid_mask])) / len(t[valid_mask])
+#mlp = Classifier(layers = [Layer('Sigmoid', units=128), Layer('Tanh', units=64), Layer(type='Softmax')])
+#mlp.fit(X[train_mask], t[train_mask])
+#predictions = mlp.predict(X[valid_mask])[:,0]
+#print float(np.sum(np.array(predictions) == t[valid_mask])) / len(t[valid_mask])
