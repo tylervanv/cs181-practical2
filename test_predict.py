@@ -15,4 +15,4 @@ with open('predictions.csv', 'wb') as output_file:
     writer = csv.writer(output_file)
     writer.writerow(('Id', 'Prediction'))
     for tup in predictions:
-        output_file.write(predictions)
+        writer.writerow(tup)
