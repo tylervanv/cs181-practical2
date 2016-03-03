@@ -15,6 +15,7 @@ import numpy as np
 from scipy import sparse
 import cPickle as pickle
 import sys
+from scikits.statsmodels.distributions import ECDF # installed from http://scikits.appspot.com/statsmodels
 
 import util
 
@@ -151,6 +152,15 @@ def main():
     print
 
     X, t, ids = create_data_matrix(0, 10000, TRAIN_DIR)
+
+    X = X.T
+    for i in range(len(X)):
+        if X[i].any() and not X[i].all():
+            X = np.vstack((X, ECDF(X[i])(X[i])))
+            features.append(features[i] + ' ECDF')
+    X = X.T
+    print X.shape
+
     pickle.dump((ids, X, t, features), open('train_data_new.p', 'w'))
 
 if __name__ == "__main__":
