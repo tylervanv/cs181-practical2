@@ -1,17 +1,21 @@
 import cPickle as pickle
 import numpy as np
 
+import util
+
 from sklearn.cross_validation import cross_val_score
 from sklearn import svm
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.linear_model import LogisticRegression
+from sklearn.feature_selection import SelectFromModel
 
 from sknn.mlp import Classifier, Layer
 #import skflow
 
-import util
+import matplotlib.pyplot as plt
+
 
 ids, X, t, features = pickle.load(open('train_data_new.p', 'r'))
 print X.shape
@@ -36,16 +40,30 @@ valid_mask = ~train_mask
 #clf = svm.SVC()
 #print np.mean(cross_val_score(clf, X, t))
 
+clf = svm.LinearSVC()
+print np.mean(cross_val_score(clf, X, t))
+clf.fit(X, t)
+print list(enumerate(reversed(np.array(features)[np.argsort(np.linalg.norm(clf.coef_, axis=0))])))
+clf.coef_.shape
+
 #clf = RandomForestClassifier(min_samples_split=1)
 #print np.mean(cross_val_score(clf, X, t))
 
 clf = ExtraTreesClassifier(min_samples_split=1)
 print np.mean(cross_val_score(clf, X, t))
 clf.fit(X, t)
-import matplotlib.pyplot as plt
 plt.plot(range(X.shape[1]), clf.feature_importances_)
-print list(enumerate(np.array(features)[np.argsort(clf.feature_importances_)]))
-#plt.hist(X[:,features.index('totaltime')], bins=np.arange(0, 2000, 10))
+print list(enumerate(reversed(np.array(features)[np.argsort(clf.feature_importances_)])))
+plt.hist(X[:,features.index('totaltime')], bins=np.arange(0, 2000, 10))
+plt.hist(np.log(X[:,features.index('bytes_received')]+1), bins=np.arange(0, 20, 1))
+
+for scaling in [0.5, 0.75, 0.9, 1, 1.1, 1.25, 1.5]:
+    model = SelectFromModel(clf, threshold=str(scaling)+'*mean', prefit=True)
+    X_new = model.transform(X)
+    print 'mean', scaling, X_new.shape[1], np.mean(cross_val_score(clf, X_new, t))
+    model = SelectFromModel(clf, threshold=str(scaling)+'*median', prefit=True)
+    X_new = model.transform(X)
+    print 'median', scaling, X_new.shape[1], np.mean(cross_val_score(clf, X_new, t))
 
 #clf = DecisionTreeClassifier(min_samples_split=1)
 #print np.mean(cross_val_score(clf, X, t))
