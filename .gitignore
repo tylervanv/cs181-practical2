@@ -1,0 +1,7 @@
+malware_test.tar.gz
+malware_train.tar.gz
+practical2-classification.pdf
+sample_predictions.csv
+test/*
+train/*
+util.pyc
