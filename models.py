@@ -81,14 +81,5 @@ valid_mask = ~train_mask
 
 mlp = Classifier(layers = [Layer('Sigmoid', units=100), Layer(type='Softmax')])
 mlp.fit(X[train_mask], t[train_mask])
-predictions = mlp.predict(X[valid_mask])
-print predictions.shape
-print float(sum(np.array(predictions) == t[valid_mask])) / len(t[valid_mask])
-
-#nn = Classifier(
-#    layers=[
-#        Layer("Maxout", units=100, pieces=2),
-#        Layer("Softmax")],
-#    learning_rate=0.001,
-#    n_iter=25)
-nn.fit(X_train, y_train)
+predictions = mlp.predict(X[valid_mask])[:,0]
+print float(np.sum(np.array(predictions) == t[valid_mask])) / len(t[valid_mask])
