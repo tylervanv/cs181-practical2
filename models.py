@@ -48,8 +48,8 @@ def validate(clf):
     X_new = model.transform(X)
     feature_mask = model.get_support()
     cvscore_selected = np.mean(cross_val_score(clf, X_new, t))
-    best_model = clf.fit(X_new, t)
-    return cvscore, feature_importances, best_select, feature_mask, cvscore_selected, best_model
+    clf.fit(X_new, t)
+    return cvscore, feature_importances, best_select, feature_mask, cvscore_selected, clf
 
 def valid_accuracy(clf):
     clf.fit(X[train_mask], t[train_mask])
