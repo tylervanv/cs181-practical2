@@ -37,18 +37,16 @@ features = call_list + map(lambda s : s + ' indicator', call_list) + map(str, ra
 #        call = el.tag
 #        call_set.add(call)
 
-def create_data_matrix(start_index, end_index, direc="train"):
+def create_data_matrix(num=None):
     X = None
     classes = []
     ids = [] 
     i = -1
 
-    #for datafile in os.listdir(direc):
-    #    if datafile == '.DS_Store':
-    #        continue
-    #    tree = ET.parse(os.path.join(direc,datafile))
-    #    add_to_set(tree)
-    for datafile in os.listdir(direc):
+    train_files = os.listdir('train')
+    test_files = os.listdir('test')
+
+    for datafile in train_files + test_files:
         if datafile == '.DS_Store':
             continue
 
@@ -56,9 +54,7 @@ def create_data_matrix(start_index, end_index, direc="train"):
         if i % 100 == 0:
             print i
             sys.stdout.flush()
-        if i < start_index:
-            continue 
-        if i >= end_index:
+        if num is not None and i >= num:
             break
 
         # extract id and true class (if available) from filename
@@ -75,17 +71,13 @@ def create_data_matrix(start_index, end_index, direc="train"):
             classes.append(-1)
 
         # parse file as an xml document
-        tree = ET.parse(os.path.join(direc,datafile))
-        #for elt in tree.getroot():
-        #    print [e.tag=='thread' for e in elt]
-        #    #print (elt.tag, elt.attrib, [e[0].tag=='all_section' for e in elt])
-        #print
-        #print
+        direc = 'train' if clazz != 'X' else 'test'
+        tree = ET.parse(os.path.join(direc, datafile))
 
         this_row_dict = call_feats(tree)
-        this_row_dict['has_socket'] = int('socket' in open(os.path.join(direc,datafile), 'r').read())
-        this_row_dict['has_import'] = int('import' in open(os.path.join(direc,datafile), 'r').read())
-        this_row_dict['has_export'] = int('export' in open(os.path.join(direc,datafile), 'r').read())
+        this_row_dict['has_socket'] = int('socket' in open(os.path.join(direc, datafile), 'r').read())
+        this_row_dict['has_import'] = int('import' in open(os.path.join(direc, datafile), 'r').read())
+        this_row_dict['has_export'] = int('export' in open(os.path.join(direc, datafile), 'r').read())
         this_row = np.array([(this_row_dict[feature] if feature in this_row_dict else 0) for feature in features])
         #this_row = call_feats(tree)
         if X is None:
@@ -138,49 +130,24 @@ def call_feats(tree):
             if el.attrib['socket'] in features:
                 call_counter[el.attrib['socket']] = 1
 
-    ##### TRY ADDING (BINARY?) FEATURES FOR SOCKET NUMBER -- e.g. sockets 1772, 1812, and 1828 are usually Swizzor, while 2068 is never Swizzor
-
-
-    #call_feat_array = np.zeros(len(good_calls))
-    #for i in range(len(good_calls)):
-    #    call = good_calls[i]
-    #    call_feat_array[i] = 0
-    #    if call in call_counter:
-    #        call_feat_array[i] = call_counter[call]
 
     return call_counter
-    #return call_feat_array
 
 ## Feature extraction
 def main():
-    features = call_list + map(lambda s : s + ' indicator', call_list) + map(str, range(4000)) + ['bytes_sent', 'bytes_received', 'any_sent', 'any_received', 'totaltime']
+    features = call_list + map(lambda s : s + ' indicator', call_list) + map(str, range(4000))\
+               + ['bytes_sent', 'bytes_received', 'any_sent', 'any_received', 'totaltime']
 
-    X_train, t_train, train_ids, _ = create_data_matrix(0, 5, TRAIN_DIR)
-    X_valid, t_valid, valid_ids, _ = create_data_matrix(10, 15, TRAIN_DIR)
-
-    print 'Data matrix (training set):'
-    print X_train
-    print train_ids
-    print 'Classes (training set):'
-    print t_train
-
-    # From here, you can train models (eg by importing sklearn and inputting X_train, t_train).
-
-
-    print 'unique tags:', call_set
-    print
-    print
-
-    X, t, ids, features = create_data_matrix(0, 10000, TRAIN_DIR)
+    X, t, ids, features = create_data_matrix()
     print X.shape
 
-    # filter all nontrivial column
+    # indices of all nontrivial columns
     indices = [i for i in range(X.shape[1]) if X[:,i].any() and not X[:,i].all()]
     X = X[:,indices]
     features = np.array(features)[indices]
     print 'Number of features:', len(features)
 
-    pickle.dump((ids, X, t, features), open('train_data_new.p', 'w'))
+    pickle.dump((ids, X, t, features), open('data_matrix.p', 'w'))
 
 if __name__ == "__main__":
     main()

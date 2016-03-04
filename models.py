@@ -19,40 +19,15 @@ from sknn.mlp import Classifier, Layer
 import matplotlib.pyplot as plt
 
 
-ids, X, t, features = pickle.load(open('train_data_new.p', 'r'))
+ids, X, t, features = pickle.load(open('data_matrix.p', 'r'))
 print X.shape
-
-# add binary indicator variables for every nontrivial variable in the original data
-#X = X.T
-#for i in range(len(X)):
-#    if X[i].any() and not X[i].all():
-#        X = np.vstack((X, np.array(map(int, X[i] != 0))))
-#X = X.T
-#print X.shape
-
-
-#from scikits.statsmodels.distributions import ECDF # installed from http://scikits.appspot.com/statsmodels
-#X = X.T
-#for i in range(len(X)):
-#    if X[i].any() and not X[i].all():
-#        X = np.vstack((X, ECDF(X[i])(X[i])))
-#        features.append(features[i] + ' ECDF')
-#X = X.T
-#print X.shape
-
-
+X = X[t != -1]
+t = t[t != -1]
+print X.shape
 
 train_list = np.random.choice(range(len(X)), size = 0.7 * len(X), replace=False)
 train_mask = np.array([i in train_list for i in range(len(X))])
 valid_mask = ~train_mask
-
-#clf = svm.SVC()
-#clf.fit(X[train_mask], t[train_mask])
-#predictions = clf.predict(X[valid_mask])
-#print float(sum(np.array(predictions) == t[valid_mask])) / len(t[valid_mask])
-
-#clf = svm.SVC()
-#print np.mean(cross_val_score(clf, X, t))
 
 def validate(clf):
     cvscore = np.mean(cross_val_score(clf, X, t))
@@ -69,86 +44,88 @@ def validate(clf):
         X_new = SelectFromModel(clf, threshold=str(scaling)+'*median', prefit=True).transform(X)
         selection_results['median'][scaling] = np.mean(cross_val_score(clf, X_new, t))
     best_select = max(itertools.product(['mean', 'median'], scalings), key = lambda (m,s) : selection_results[m][s])
-    X_new = SelectFromModel(clf, threshold=str(best_select[1]) + '*' + best_select[0], prefit=True).transform(X)
+    model = SelectFromModel(clf, threshold=str(best_select[1]) + '*' + best_select[0], prefit=True)
+    X_new = model.transform(X)
+    feature_mask = model.get_support()
     cvscore_selected = np.mean(cross_val_score(clf, X_new, t))
-    return cvscore, feature_importances, best_select, cvscore_selected
+    best_model = clf.fit(X_new, t)
+    return cvscore, feature_importances, best_select, feature_mask, cvscore_selected, best_model
+
+def valid_accuracy(clf):
+    clf.fit(X[train_mask], t[train_mask])
+    predictions = clf.predict(X[valid_mask])
+    return float(sum(np.array(predictions) == t[valid_mask])) / len(t[valid_mask])
+
+results = dict()
 
 
+clf = svm.SVC()
+accuracy = valid_accuracy(clf)#np.mean(cross_val_score(clf, X, t))
+clf.fit(X, t)
+results['SVC'] = (clf, range(X.shape[1]), accuracy)
+print 'SVC:', accuracy
 
 clf = svm.LinearSVC()
-print np.mean(cross_val_score(clf, X, t))
+accuracy = valid_accuracy(clf)#np.mean(cross_val_score(clf, X, t))
 clf.fit(X, t)
-clf.feature_importance_
-validate(clf)
-print list(enumerate(reversed(np.array(features)[np.argsort(np.linalg.norm(clf.coef_, axis=0))])))
-clf.coef_.shape
+results['LinearSVC'] = (clf, range(X.shape[1]), accuracy)
+print 'LinearSVC:', accuracy
+#clf.feature_importance_
+#_, _, _, feature_mask, accuracy, clf = validate(clf)
+#results['LinearSVC'] = (clf, accuracy)
 
 clf = RandomForestClassifier(min_samples_split=1)
-results = validate(clf)
-best_select = results[2]
-clf.fit(X, t)
-X_new = SelectFromModel(clf, threshold=str(best_select[1]) + '*' + best_select[0], prefit=True).transform(X)
-pickle.dump(clf, open('clf.p', 'w'))
-
-print 'Random Forest:', validate(clf)
-def is_int(s):
-    try:
-        int(s)
-        return True
-    except ValueError:
-        return False
-clf.fit(X, t)
-plt.plot(range(X.shape[1]), clf.feature_importances_)
-print list(enumerate(reversed(np.array(features)[np.argsort(clf.feature_importances_)])))
-
-#model = SelectFromModel(clf, prefit=True)
-#X_new = model.transform(X)
-#print np.mean(cross_val_score(clf, X_new, t))
-#for scaling in [0.25, 0.5, 0.75, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2]:
-#    model = SelectFromModel(clf, threshold=str(scaling)+'*mean', prefit=True)
-#    X_new = model.transform(X)
-#    print 'mean', scaling, X_new.shape[1], np.mean(cross_val_score(clf, X_new, t))
-#    model = SelectFromModel(clf, threshold=str(scaling)+'*median', prefit=True)
-#    X_new = model.transform(X)
-#    print 'median', scaling, X_new.shape[1], np.mean(cross_val_score(clf, X_new, t))
-
-
+_, _, _, feature_mask, _, clf = validate(clf)
+accuracy = valid_accuracy(clf)
+results['RandomForest'] = (clf, feature_mask, accuracy)
+print 'Random Forest:', accuracy
+#print list(enumerate(reversed(np.array(features)[np.argsort(clf.feature_importances_)])))
+#X_new = SelectFromModel(clf, threshold=str(best_select[1]) + '*' + best_select[0], prefit=True).transform(X)
+#pickle.dump(clf, open('clf.p', 'w'))
 
 clf = ExtraTreesClassifier(min_samples_split=1)
-print 'Extra Random Trees:', validate(clf)
-#print np.mean(cross_val_score(clf, X, t))
-#clf.fit(X, t)
-#plt.plot(range(X.shape[1]), clf.feature_importances_)
-#print list(enumerate(reversed(np.array(features)[np.argsort(clf.feature_importances_)])))
-
-#model = SelectFromModel(clf, prefit=True)
-#X_new = model.transform(X)
-#print np.mean(cross_val_score(clf, X_new, t))
-#for scaling in [0.25, 0.5, 0.75, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2]:
-#    model = SelectFromModel(clf, threshold=str(scaling)+'*mean', prefit=True)
-#    X_new = model.transform(X)
-#    print 'mean', scaling, X_new.shape[1], np.mean(cross_val_score(clf, X_new, t))
-#    model = SelectFromModel(clf, threshold=str(scaling)+'*median', prefit=True)
-#    X_new = model.transform(X)
-#    print 'median', scaling, X_new.shape[1], np.mean(cross_val_score(clf, X_new, t))
+_, _, _, feature_mask, _, clf = validate(clf)
+accuracy = valid_accuracy(clf)
+results['ExtraTrees'] = (clf, feature_mask, accuracy)
+print 'Extra Random Trees:', accuracy
 
 clf = DecisionTreeClassifier(min_samples_split=1)
-print 'Decision Tree:', validate(clf)
-
-
-clf = LogisticRegression(solver='lbfgs', multi_class='multinomial')
-print np.mean(cross_val_score(clf, X, t))
+_, _, _, feature_mask, _, clf = validate(clf)
+accuracy = valid_accuracy(clf)
+results['DecisionTree'] = (clf, feature_mask, accuracy)
+print 'Decision Tree:', accuracy
 
 clf = LogisticRegression()
-print np.mean(cross_val_score(clf, X, t))
+accuracy = valid_accuracy(clf)#np.mean(cross_val_score(clf, X, t))
+clf.fit(X, t)
+results['LogisticRegression'] = (clf, range(X.shape[1]), accuracy)
+print 'Logistic Regression:', accuracy
+
+clf = LogisticRegression(solver='lbfgs', multi_class='multinomial')
+accuracy = valid_accuracy(clf)#np.mean(cross_val_score(clf, X, t))
+clf.fit(X, t)
+results['LogisticRegressionMultinomial'] = (clf, range(X.shape[1]), accuracy)
+print 'Logistic Regression (Multinomial):', accuracy
 
 clf = MultinomialNB()
-print np.mean(cross_val_score(clf, X, t))
+accuracy = valid_accuracy(clf)#np.mean(cross_val_score(clf, X, t))
+clf.fit(X, t)
+results['MultinomialNB'] = (clf, range(X.shape[1]), accuracy)
+print 'Multinomial NB:', accuracy
 
-
-np.mean(cross_val_score(KNeighborsClassifier(n_neighbors=20, weights='distance'), X, t))
+clf = KNeighborsClassifier(n_neighbors=20, weights='distance')
+accuracy = valid_accuracy(clf)#np.mean(cross_val_score(clf, X, t))
+clf.fit(X, t)
+results['kNN (k=20)'] = (clf, range(X.shape[1]), accuracy)
+print 'k-Nearest Neighbors (k=20):', accuracy
 #print [np.mean(cross_val_score(KNeighborsClassifier(n_neighbors=n_neighbors), X, t)) for n_neighbors in range(1,21)]
 
+
+best = results[max(results, lambda k : results[k][2])]
+clf = results[0]
+feature_mask = results[1]
+pickle.dump((feature_mask, clf), open('classifier.p', 'w'))
+pickle.dump(results, open('classifier_results.p', 'w'))
 
 
 #clf = skflow.TensorFlowLinearClassifier()
