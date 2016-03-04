@@ -121,9 +121,11 @@ print 'k-Nearest Neighbors (k=20):', accuracy
 #print [np.mean(cross_val_score(KNeighborsClassifier(n_neighbors=n_neighbors), X, t)) for n_neighbors in range(1,21)]
 
 
-best = results[max(results, lambda k : results[k][2])]
-clf = results[0]
-feature_mask = results[1]
+best_model_name = max(results, key = lambda k : results[k][2])
+best = results[best_model_name]
+clf = best[0]
+feature_mask = best[1]
+print 'Best model: %s (accuracy %f)' % (best_model_name, results[best_model_name][2])
 pickle.dump((feature_mask, clf), open('classifier.p', 'w'))
 pickle.dump(results, open('classifier_results.p', 'w'))
 
