@@ -2,10 +2,13 @@ import cPickle as pickle
 from sample_code import create_data_matrix
 import csv
 
-ids, X, t, used_features = pickle.load(open('train_data_new.p', 'r'))
+ids, X, t, used_features = pickle.load(open('data_matrix.p', 'r'))
+feature_mask, clf = pickle.load(open('classifier.p', 'r'))
 
-clf = pickle.load(open('clf.p', 'r'))
-X_test, t_test, ids_test, features = create_data_matrix(0, 10000, 'test')
+
+#### FIX THE REST
+
+X_test, t_test, ids_test, features = create_data_matrix(100)
 feature_indices = [features.index(feature) for feature in used_features]
 X_test = X_test[:, feature_indices]
 predictions = clf.predict(X_test)
